@@ -1,6 +1,7 @@
-from src.livro import Livro
-from src.database import DataBase
 from datetime import datetime
+
+from src.database import DataBase
+from src.livro import Livro
 
 
 class Service:
@@ -23,8 +24,10 @@ class Service:
             raise ValueError("O preço tem que ser maior que 0!")
         if ano > datetime.today().year + 1:
             raise ValueError(
-                f"O ano tem que ser menor que o ano atual! ({datetime.today().year+1})"
+                f"O ano tem que ser menor que o ano atual! ({datetime.today().year + 1})"
             )
+        if quantidade<0:
+            raise ValueError("A quantidade não pode ser negativa!")
         disponivel = 1 if quantidade > 0 else 0
 
         novo_livro = Livro(None, titulo, autor, preco, ano, quantidade, disponivel)
@@ -81,7 +84,7 @@ class Service:
         return dados
 
     def listar_todos_livros(self) -> list[Livro]:
-        livros=self.db.carregar_dados()
+        livros = self.db.carregar_dados()
         if not livros:
             raise ValueError("Não há livros para serem listados!")
         return livros
