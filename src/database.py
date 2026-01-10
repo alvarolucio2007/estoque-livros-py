@@ -1,5 +1,6 @@
 import sqlite3
 from src.livro import Livro
+import src.servico
 
 
 class DataBase:
@@ -29,7 +30,7 @@ class DataBase:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.fechar()
 
-    def adicionar_livro(self, livro: Livro) -> None:
+    def adicionar_livro(self, livro: Livro) -> int | None:
         comando = "INSERT INTO livros (titulo,autor,preco,ano,quantidade,disponivel) VALUES (?,?,?,?,?,?)"
         dados = (
             livro.titulo,
@@ -41,6 +42,7 @@ class DataBase:
         )
         _ = self.cursor.execute(comando, dados)
         self.connection.commit()
+        return self.cursor.lastrowid
 
     def carregar_dados(self) -> list[Livro]:
         comando = "SELECT * FROM livros"
@@ -79,17 +81,29 @@ class DataBase:
         return [Livro(*linha) for linha in encontrados]
 
     def gerar_relatorio(self) -> dict[str, int | str | float]:
-        comando = (
-            "SELECT COUNT(*), SUM(preco * quantidade), SUM(quantidade) FROM livros"
-        )
-        _ = self.cursor.execute(comando)
-        tupla: tuple[str, float | None, int | None] = self.cursor.fetchone()
-        if not tupla:
-            return {"Títulos": 0, "Soma: ": 0.0, "Estoque utilizado: ": 0}
+        # Query para pegar tudo de uma vez
+        comando_total = "SELECT COUNT(*) FROM livros"
+        comando_disp = "SELECT COUNT(*) FROM livros WHERE disponivel = 1"
+        comando_indisp = "SELECT COUNT(*) FROM livros WHERE disponivel = 0"
+        comando_soma = "SELECT SUM(preco * quantidade) FROM livros"
+
+        _ = self.cursor.execute(comando_total)
+        total = self.cursor.fetchone()[0] or 0
+
+        _ = self.cursor.execute(comando_disp)
+        disp = self.cursor.fetchone()[0] or 0
+
+        _ = self.cursor.execute(comando_indisp)
+        indisp = self.cursor.fetchone()[0] or 0
+
+        _ = self.cursor.execute(comando_soma)
+        soma = self.cursor.fetchone()[0] or 0.0
+
         return {
-            "Títulos: ": tupla[0] or 0,
-            "Soma: ": tupla[1] or 0.0,
-            "Estoque utilizado: ": tupla[2] or 0,
+            "total_livros": total,
+            "livros_disponiveis": disp,
+            "livros_indisponiveis": indisp,
+            "valor_total_estoque": soma,
         }
 
     def titulo_existe(self, titulo: str) -> bool:
@@ -104,3 +118,11 @@ class DataBase:
         tuplas_id = self.cursor.fetchall()
         lista = [elemento[0] for elemento in tuplas_id]
         return set(lista)
+
+    def buscar_por_id(self, id: int) -> list[Livro]:
+        comando = "SELECT * FROM livros WHERE id = ?"
+        _ = self.cursor.execute(comando, (id,))
+        linha = self.cursor.fetchone()
+        if linha:
+            return [Livro(*linha)]
+        return []

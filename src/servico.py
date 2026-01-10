@@ -9,6 +9,7 @@ class Service:
 
     def __init__(self) -> None:
         self.db = DataBase()
+        self.set_id = set(int(id) for id in self.db.listar_id())
 
     def cadastrar_livro(
         self,
@@ -18,6 +19,8 @@ class Service:
         ano: int,
         quantidade: int,
     ) -> None:
+        if not titulo.strip() or not autor.strip():
+            raise ValueError("Título e autor não podem ficar em branco!")
         if self.db.titulo_existe(titulo):
             raise ValueError(f"O livro {titulo} já existe!")
         if preco <= 0:
@@ -31,29 +34,40 @@ class Service:
         disponivel = 1 if quantidade > 0 else 0
 
         novo_livro = Livro(None, titulo, autor, preco, ano, quantidade, disponivel)
-        self.db.adicionar_livro(novo_livro)
+        try:
+            id_gerado = self.db.adicionar_livro(novo_livro)
+            if id_gerado is not None:
+                self.set_id.add(id_gerado)
+            else:
+                raise ValueError(
+                    "Erro de conexão do banco de dados! ID válido não retornado!"
+                )
+        except Exception as e:
+            print(f"Erro crítico do banco! {e}")
+            raise e
 
-    def buscar_livro(self, tipo: str, valor: str) -> list[Livro]:
+    def buscar_livro(self, tipo: str | int, valor: str) -> list[Livro]:
+        if tipo == "Código":
+            return self.db.buscar_por_id(int(valor))
         traducao = {"Título": "titulo", "Autor": "autor"}
         if tipo not in traducao:
-            raise ValueError("O tipo de dado tem que ser ou Título ou Autor!")
-        coluna_sql = traducao[tipo]
-        encontrados = self.db.buscar_livros(coluna_sql, valor)
+            raise ValueError("O tipo de dado tem que ser ou Título, Autor, ou Código!")
+
+        encontrados = self.db.buscar_livros(traducao[tipo], valor)
         if not encontrados:
             raise ValueError("Nenhum livro encontrado!")
         return encontrados
 
     def excluir_livro(self, id: int) -> None:
-        set_ids = self.db.listar_id()
-        if id not in set_ids:
+        if id not in self.set_id:
             raise ValueError("O id precisa existir no banco de dados!")
         self.db.deletar_livro(id)
+        self.set_id.remove(id)
 
     def atualizar_livro(
         self, id: int, campo: str, novo_valor: str | int | float
     ) -> None:
-        set_ids = self.db.listar_id()
-        if id not in set_ids:
+        if id not in self.set_id:
             raise ValueError("O id precisa existir no banco de dados!")
         traducao = {
             "Título": "titulo",
@@ -73,14 +87,17 @@ class Service:
                 "Para trocar o preço, é necessário que o novo valor seja um valor numérico com decimais! "
             )
         if campo == "Quantidade" and not isinstance(novo_valor, int):
-            raise ValueError(
-                "Para trocar a quantidade, é necessário que o novo valor seja um valor numérico inteiro! (Sem decimais.)"
-            )
+            if not isinstance(novo_valor, int):
+                raise ValueError(
+                    "Para trocar a quantidade, é necessário que o novo valor seja um valor numérico inteiro! (Sem decimais.)"
+                )
+            novo_status = 1 if novo_valor > 0 else 0
+            self.db.atualizar_livros(id, "disponivel", novo_status)
         self.db.atualizar_livros(id, traducao[campo], novo_valor)
 
     def gerar_relatorio_formatado(self) -> dict[str, int | str | float]:
         dados = self.db.gerar_relatorio()
-        dados["Soma: "] = f"R$ {dados['Soma: ']:.2f}"
+        dados["valor_total_estoque"] = f"R$ {dados['valor_total_estoque']:.2f}"
         return dados
 
     def listar_todos_livros(self) -> list[Livro]:
