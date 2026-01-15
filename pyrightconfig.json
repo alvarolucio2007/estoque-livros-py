@@ -1,8 +1,0 @@
-{
-    "venvPath": ".",
-    "venv": ".venv",
-    "reportAny": false,
-    "reportExplicitAny": false,
-    "reportUnannotatedClassAttribute": false,
-    "reportUnknownMemberType": false,
-}
