@@ -1,6 +1,5 @@
 import sqlite3
 from src.livro import Livro
-import src.servico
 
 
 class DataBase:
@@ -8,7 +7,7 @@ class DataBase:
     cursor: sqlite3.Cursor
 
     def __init__(self) -> None:
-        self.connection = sqlite3.connect("teste.db", check_same_thread=False)
+        self.connection = sqlite3.connect("estoque_livros.db", check_same_thread=False)
         self.cursor = self.connection.cursor()
         _ = self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS livros (id INTEGER PRIMARY KEY AUTOINCREMENT,titulo TEXT,autor TEXT, preco REAL,ano INTEGER, quantidade INTEGER, disponivel INTEGER)"
