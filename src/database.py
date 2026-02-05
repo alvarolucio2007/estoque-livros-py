@@ -1,5 +1,5 @@
 import sqlite3
-from src.livro import Livro
+from livro import Livro
 
 
 class DataBase:
@@ -47,7 +47,18 @@ class DataBase:
         comando = "SELECT * FROM livros"
         _ = self.cursor.execute(comando)
         linhas = self.cursor.fetchall()
-        lista_livros: list[Livro] = [Livro(*linha) for linha in linhas]
+        lista_livros: list[Livro] = [
+            Livro(
+                id=l[0],
+                titulo=l[1],
+                autor=l[2],
+                preco=l[3],
+                ano=l[4],
+                quantidade=l[5],
+                disponivel=l[6],
+            )
+            for l in linhas
+        ]
         return lista_livros
 
     def deletar_livro(self, id: int) -> None:
@@ -58,7 +69,7 @@ class DataBase:
 
     def atualizar_livros(
         self, id: int, campo: str, novo_valor: str | int | float
-    ) -> None:
+    ) -> None | bool:
         if campo not in ("titulo", "autor", "preco", "ano", "quantidade"):
             return None
         if campo == "quantidade" and isinstance(novo_valor, int):
@@ -68,13 +79,32 @@ class DataBase:
         else:
             comando = f"UPDATE livros SET {campo} = ? WHERE id = ?"
             _ = self.cursor.execute(comando, (novo_valor, id))
+        linhas_afetadas = self.cursor.rowcount
         self.connection.commit()
+        return linhas_afetadas > 0
+
+    def atualizar_livros_titulo(self, id: int, novo_titulo: str) -> None:
+        pass
 
     def buscar_livros(self, coluna: str, valor: str | int) -> list[Livro]:
         if coluna not in ("titulo", "autor"):
             return []
         comando = f"SELECT * FROM livros WHERE {coluna} LIKE ?"
         sql_valor: str = f"%{valor}%"
+        _ = self.cursor.execute(comando, (sql_valor,))
+        encontrados = self.cursor.fetchall()
+        return [Livro(*linha) for linha in encontrados]
+
+    def buscar_livros_titulo(self, autor: str) -> list[Livro]:
+        comando = "SELECT * FROM livros WHERE titulo LIKE ?"
+        sql_valor: str = f"%{autor}"
+        _ = self.cursor.execute(comando, (sql_valor,))
+        encontrados = self.cursor.fetchall()
+        return [Livro(*linha) for linha in encontrados]
+
+    def buscar_livros_autor(self, autor: str) -> list[Livro]:
+        comando = "SELECT * FROM livros WHERE autor LIKE ?"
+        sql_valor: str = f"%{autor}"
         _ = self.cursor.execute(comando, (sql_valor,))
         encontrados = self.cursor.fetchall()
         return [Livro(*linha) for linha in encontrados]
@@ -118,10 +148,12 @@ class DataBase:
         lista = [elemento[0] for elemento in tuplas_id]
         return set(lista)
 
-    def buscar_por_id(self, id: int) -> list[Livro]:
+    def buscar_por_id(self, id: int) -> Livro | None:
         comando = "SELECT * FROM livros WHERE id = ?"
         _ = self.cursor.execute(comando, (id,))
         linha = self.cursor.fetchone()
         if linha:
-            return [Livro(*linha)]
-        return []
+            colunas = [column[0] for column in self.cursor.description]
+            dados_livro = dict(zip(colunas, linha))
+            return Livro(**dados_livro)
+        return None

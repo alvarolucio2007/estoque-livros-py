@@ -1,7 +1,6 @@
 from datetime import datetime
-
-from src.database import DataBase
-from src.livro import Livro
+from database import DataBase
+from livro import Livro
 
 
 class Service:
@@ -10,6 +9,11 @@ class Service:
     def __init__(self) -> None:
         self.db = DataBase()
         self.set_id = set(int(id) for id in self.db.listar_id())
+
+    def verificar_id(self, id: int) -> None | bool:
+        if id not in self.set_id:
+            return None
+        return True
 
     def cadastrar_livro(
         self,
@@ -33,7 +37,15 @@ class Service:
             raise ValueError("A quantidade não pode ser negativa!")
         disponivel = 1 if quantidade > 0 else 0
 
-        novo_livro = Livro(None, titulo, autor, preco, ano, quantidade, disponivel)
+        novo_livro = Livro(
+            id=None,
+            titulo=titulo,
+            autor=autor,
+            preco=preco,
+            ano=ano,
+            quantidade=quantidade,
+            disponivel=disponivel,
+        )
         try:
             id_gerado = self.db.adicionar_livro(novo_livro)
             if id_gerado is not None:
@@ -46,7 +58,7 @@ class Service:
             print(f"Erro crítico do banco! {e}")
             raise e
 
-    def buscar_livro(self, tipo: str | int, valor: str) -> list[Livro]:
+    def buscar_livro(self, tipo: str | int, valor: str) -> list[Livro] | Livro | None:
         if tipo == "Código":
             return self.db.buscar_por_id(int(valor))
         traducao = {"Título": "titulo", "Autor": "autor"}
@@ -58,17 +70,40 @@ class Service:
             raise ValueError("Nenhum livro encontrado!")
         return encontrados
 
-    def excluir_livro(self, id: int) -> None:
-        if id not in self.set_id:
-            raise ValueError("O id precisa existir no banco de dados!")
+    def buscar_livro_codigo(self, id: int) -> Livro | None:
+        if not self.verificar_id(id):
+            return None
+        encontrados = self.db.buscar_por_id(int(id))
+        if not encontrados:
+            raise ValueError("Nenhum livro encontrado!")
+        return encontrados
+
+    def buscar_livro_titulo(self, titulo: str) -> list[Livro]:
+        if not self.verificar_id(id):
+            return None
+        encontrados = self.db.buscar_livros("titulo", titulo)
+        if not encontrados:
+            raise ValueError("Nenhum Livro Encontrado!")
+        return encontrados
+
+    def buscar_livro_autor(self, autor: str) -> list[Livro]:
+        encontrados = self.db.buscar_livros("autor", autor)
+        if not encontrados:
+            raise ValueError("Nenhum Livro Encontrado!")
+        return encontrados
+
+    def excluir_livro(self, id: int) -> None | bool:
+        if not self.verificar_id(id):
+            return None
         self.db.deletar_livro(id)
         self.set_id.remove(id)
+        return True
 
     def atualizar_livro(
         self, id: int, campo: str, novo_valor: str | int | float
     ) -> None:
-        if id not in self.set_id:
-            raise ValueError("O id precisa existir no banco de dados!")
+        if not self.verificar_id(id):
+            return None
         traducao = {
             "Título": "titulo",
             "Autor": "autor",
@@ -94,6 +129,36 @@ class Service:
             novo_status = 1 if novo_valor > 0 else 0
             self.db.atualizar_livros(id, "disponivel", novo_status)
         self.db.atualizar_livros(id, traducao[campo], novo_valor)
+
+    def atualizar_livro_titulo(self, id: int, novo_titulo: str) -> Livro | None:
+        if not self.verificar_id(id):
+            return None
+        self.db.atualizar_livros(id, "titulo", novo_titulo)
+        return self.db.buscar_por_id(id)
+
+    def atualizar_livro_autor(self, id: int, novo_autor: str) -> Livro | None:
+        if not self.verificar_id(id):
+            return None
+        self.db.atualizar_livros(id, "autor", novo_autor)
+        return self.db.buscar_por_id(id)
+
+    def atualizar_livro_ano(self, id: int, novo_ano: int) -> Livro | None:
+        if not self.verificar_id(id):
+            return None
+        self.db.atualizar_livros(id, "ano", novo_ano)
+        return self.db.buscar_por_id(id)
+
+    def atualizar_livro_quantidade(self, id: int, novo_quantidade: int) -> Livro | None:
+        if not self.verificar_id(id):
+            return None
+        self.db.atualizar_livros(id, "quantidade", novo_quantidade)
+        return self.db.buscar_por_id(id)
+
+    def atualizar_livro_preco(self, id: int, preco: float) -> Livro | None:
+        if not self.verificar_id(id):
+            return None
+        self.db.atualizar_livros(id, "preco", preco)
+        return self.db.buscar_por_id(id)
 
     def gerar_relatorio_formatado(self) -> dict[str, int | str | float]:
         dados = self.db.gerar_relatorio()

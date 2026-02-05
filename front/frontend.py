@@ -1,7 +1,9 @@
 import pandas as pd
 import streamlit as st
-
+import requests
 import src.servico as srv
+
+API_URL = "http://127.0.0.1:8000"
 
 
 @st.cache_resource
@@ -92,7 +94,7 @@ class FrontEnd:
         if tipo_busca == "Código":
             busca = st.number_input("Qual seria o código?", min_value=0, step=1)
             if busca:
-                resultados = self.servico.buscar_livro("Código", str(busca))
+                resultados = self.servico.buscar_livro_codigo(busca)
                 dados = [vars(livro) for livro in resultados]
                 df_resultados = pd.DataFrame(dados)
                 if not df_resultados.empty:
@@ -103,7 +105,7 @@ class FrontEnd:
         elif tipo_busca == "Título":
             busca = st.text_input("Qual seria o título?", max_chars=100)
             if busca:
-                resultados = self.servico.buscar_livro("Título", busca)
+                resultados = self.servico.buscar_livro_titulo(busca)
                 dados = [vars(livro) for livro in resultados]
                 df_resultados = pd.DataFrame(dados)
                 if not df_resultados.empty:
@@ -116,7 +118,7 @@ class FrontEnd:
         elif tipo_busca == "Autor":
             busca = st.text_input("Qual seria o autor?", max_chars=100)
             if busca:
-                resultados = self.servico.buscar_livro("Autor", busca)
+                resultados = self.servico.buscar_livro_autor(busca)
                 dados = [vars(livro) for livro in resultados]
                 df_resultados = pd.DataFrame(dados)
                 if not df_resultados.empty:
