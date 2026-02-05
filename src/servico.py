@@ -78,9 +78,7 @@ class Service:
             raise ValueError("Nenhum livro encontrado!")
         return encontrados
 
-    def buscar_livro_titulo(self, titulo: str) -> list[Livro]:
-        if not self.verificar_id(id):
-            return None
+    def buscar_livro_titulo(self, titulo: str) -> list[Livro] | None:
         encontrados = self.db.buscar_livros("titulo", titulo)
         if not encontrados:
             raise ValueError("Nenhum Livro Encontrado!")
