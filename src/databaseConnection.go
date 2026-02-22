@@ -25,6 +25,11 @@ func ConectarBanco() {
 	}
 }
 
+func (l *Livro) AntesSalvar(tx *gorm.DB) (err error) {
+	l.Disponivel = l.Quantidade > 0
+	return nil
+}
+
 func checarResultado(resultado *gorm.DB) error {
 	if resultado.Error != nil {
 		return resultado.Error
@@ -36,15 +41,7 @@ func checarResultado(resultado *gorm.DB) error {
 }
 
 func adicionarLivro(dados Livro) error {
-	novoLivro := Livro{
-		Titulo:     dados.Titulo,
-		Autor:      dados.Autor,
-		Preco:      dados.Preco,
-		Ano:        dados.Ano,
-		Quantidade: dados.Quantidade,
-		Disponivel: dados.Disponivel,
-	}
-	resultado := DB.Create(&novoLivro)
+	resultado := DB.Create(&dados)
 	if resultado.Error != nil {
 		return resultado.Error
 	}
@@ -87,4 +84,51 @@ func buscarLivroAutor(autor string) ([]Livro, error) {
 	}
 	return livrosEncontados, nil
 }
-func gerarRelatorio()
+
+func gerarRelatorio() (map[string]any, error) {
+	var total, disponiveis, indisponiveis int64
+	var valorTotal float64
+	DB.Model(&Livro{}).Count(&total)
+	DB.Model(&Livro{}).Where("disponivel=?", true).Count(&disponiveis)
+	DB.Model(&Livro{}).Where("disponivel=?", false).Count(&indisponiveis)
+	DB.Model(&Livro{}).Select("SUM(preco*quantidade)").Scan(&valorTotal)
+	return map[string]any{
+		"total_livros":         total,
+		"livros_disponiveis":   disponiveis,
+		"livros_indisponiveis": indisponiveis,
+		"valor_total_estoque":  valorTotal,
+	}, nil
+}
+
+func tituloExiste(titulo string) bool {
+	var existe bool
+	err := DB.Model(&Livro{}).Select("count(*)>0").Where("Lower(titulo)=LOWER(?)", titulo).Find(&existe).Error
+	if err != nil {
+		return false
+	}
+	return existe
+}
+
+func listarID() []int {
+	var livros []Livro
+	DB.Find(&livros)
+	setIds := make(map[int]struct{})
+	for _, livro := range livros {
+		setIds[int(livro.ID)] = struct{}{}
+	}
+	idUnicos := make([]int, 0, len(setIds))
+	for id := range setIds {
+		idUnicos = append(idUnicos, id)
+	}
+	return idUnicos
+}
+
+func buscarPorId(id uint) (Livro, error) {
+	var livroEncontrado Livro
+	res := DB.First(&livroEncontrado, id)
+	err := checarResultado(res)
+	if err != nil {
+		return Livro{}, err
+	}
+	return livroEncontrado, nil
+}
