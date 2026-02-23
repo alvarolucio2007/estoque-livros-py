@@ -18,7 +18,7 @@ func servicoAdicionarLivro(titulo string, autor string, preco float64, ano int, 
 	if autor == "" {
 		return errors.New("autor não pode ficar em branco")
 	}
-	if preco <= 0 {
+	if preco < 0 {
 		return errors.New("o preço tem que ser maior que 0")
 	}
 	if ano > time.Now().Year()+1 {
