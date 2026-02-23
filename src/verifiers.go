@@ -36,10 +36,7 @@ func servicoAdicionarLivro(titulo string, autor string, preco float64, ano int, 
 		// O ID você não precisa passar se ele for AutoIncrement
 
 	}
-	if err := DB.Create(&novoLivro).Error; err != nil {
-		return fmt.Errorf("erro ao inserir no banco: %w", err)
-	}
-	return nil
+	return adicionarLivro(novoLivro)
 }
 
 func servicoDeletarLivro(id uint) error {
@@ -93,4 +90,11 @@ func servicoTituloExiste(titulo string) (bool, error) {
 		return false, errors.New("titulo não pode ficar vazio")
 	}
 	return tituloExiste(titulo), nil
+}
+
+func servicoBuscarLivroId(id uint) (*Livro, error) {
+	if id == 0 {
+		return nil, errors.New("id não pode ser 0")
+	}
+	return buscarPorID(id)
 }
