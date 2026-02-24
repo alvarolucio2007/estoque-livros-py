@@ -114,5 +114,5 @@ func setupAPI() {
 		}
 		c.JSON(200, "livro deletado com sucesso")
 	})
-	r.Run()
+	r.Run("localhost:8000")
 }
