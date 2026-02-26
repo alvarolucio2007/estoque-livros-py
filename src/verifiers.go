@@ -3,13 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 )
-
-func verificarID(id uint) bool {
-	return slices.Contains(listarID(), id)
-}
 
 func servicoAdicionarLivro(titulo string, autor string, preco float64, ano int, quantidade uint) error {
 	if titulo == "" {

@@ -85,12 +85,17 @@ class FrontEnd:
         if tipo_busca == "Código":
             busca = st.number_input("Qual seria o código?", min_value=0, step=1)
             if busca:
-                resultados = [ct.buscar_livro_codigo(busca)]
-                dados = [livro for livro in resultados]
-                df_resultados = pd.DataFrame(dados)
-                if not df_resultados.empty:
-                    _ = st.success(f"Encontrado(s) {len(df_resultados)} produto(s).")
-                    _ = st.dataframe(df_resultados, width="stretch", hide_index=True)
+                if ct.buscar_livro_codigo(busca):
+                    resultados = [ct.buscar_livro_codigo(busca)]
+                    dados = [livro for livro in resultados]
+                    df_resultados = pd.DataFrame(dados)
+                    if not df_resultados.empty:
+                        _ = st.success(
+                            f"Encontrado(s) {len(df_resultados)} produto(s)."
+                        )
+                        _ = st.dataframe(
+                            df_resultados, width="stretch", hide_index=True
+                        )
                 else:
                     _ = st.warning(f"Nenhum produto encontrado com o código {busca}!")
         elif tipo_busca == "Título":
@@ -122,60 +127,80 @@ class FrontEnd:
 
     def renderizar_atualizar(self) -> None:
         _ = st.markdown("Atualização de Produto")
-        tipo_de_dado = st.selectbox(
-            "Tipo de dado",
-            ("Título", "Preço", "Autor", "Ano", "Quantidade"),
-            key="upd_campo_select",
-        )
-        novo_valor = None
-        with st.form("form_atualizar"):
-            codigo = st.number_input("Código (ID)", min_value=1, step=1)
-            if tipo_de_dado == "Preço":
-                novo_valor = st.number_input(
-                    "Qual seria o novo valor? ",
-                    min_value=0.01,
-                    step=0.01,
-                    key="upd_valor_num",
-                    format="%.2f",
+        busca = st.number_input("Qual seria o código?", min_value=0, step=1)
+        dados = {}
+        if busca in ct.listar_id():
+            resultados = [ct.buscar_livro_codigo(busca)]
+            if resultados:
+                dados = resultados
+                df_resultados = pd.DataFrame(dados)
+                _ = st.success("Produto Encontrado")
+                _ = st.dataframe(
+                    df_resultados, use_container_width=True, hide_index=True
                 )
+        else:
+            _ = st.warning(f"Nenhum produto encontrado com o código {busca}!")
+            
 
-            elif tipo_de_dado in ("Título", "Autor"):
-                novo_valor = st.text_input(
-                    "Qual seria o novo valor? ", max_chars=100, key="upd_valor_str"
+        with st.form("form_atualizar"):
+            dados_atuais = ct.buscar_livro_codigo(busca) or {}
+            if dados_atuais != {}:
+                titulo = st.text_input(
+                    "Título do Livro",
+                    value=dados_atuais.get("titulo", ""),
+                    max_chars=100,
                 )
-            elif tipo_de_dado in ("Ano", "Quantidade"):
-                novo_valor = st.number_input(
-                    "Qual seria o novo valor",
-                    min_value=0,
-                    step=1,
-                    key="upd_valor_num",
-                    format="%d",
-                )
-            clique_salvar = st.form_submit_button("Atualizar e Salvar", width="stretch")
-            if clique_salvar:
-                try:
-                    if tipo_de_dado == "Preço":
-                        assert isinstance(novo_valor, float)
-                        ct.editar_preco(codigo, novo_valor)
-                    elif tipo_de_dado == "Título":
-                        assert isinstance(novo_valor, str)
-                        ct.editar_titulo(codigo, novo_valor)
-                    elif tipo_de_dado == "Autor":
-                        assert isinstance(novo_valor, str)
-                        ct.editar_autor(codigo, novo_valor)
-                    elif tipo_de_dado == "Ano":
-                        assert isinstance(novo_valor, int)
-                        ct.editar_ano(codigo, novo_valor)
-                    elif tipo_de_dado == "Quantidade":
-                        assert isinstance(novo_valor, int)
-                        ct.editar_quantidade(codigo, novo_valor)
-                    if novo_valor is None:
-                        _ = st.error(
-                            "Erro! Por favor, insira o novo valor corretamente!"
+                col1, col2 = st.columns(2)
+                with col1:
+                    autor = st.text_input(
+                        "Autor do Livro",
+                        value=dados_atuais.get("autor", ""),
+                        max_chars=100,
+                    )
+                with col2:
+                    ano = st.number_input(
+                        "Ano de lançamento",
+                        value=dados_atuais.get("ano", ""),
+                        min_value=0,
+                        format="%d",
+                        step=1,
+                    )
+                col3, col4 = st.columns(2)
+                with col3:
+                    preco = st.number_input(
+                        "Preço do Livro",
+                        value=float(dados_atuais.get("preco", "")),
+                        min_value=0.01,
+                        format="%.2f",
+                        step=0.01,
+                    )
+                with col4:
+                    quantidade = st.number_input(
+                        "Quantidade do Livro",
+                        value=dados_atuais.get("quantidade", ""),
+                        min_value=0,
+                        format="%d",
+                        step=1,
+                    )
+                clique_salvar = st.form_submit_button("Atualizar", width="stretch")
+                if clique_salvar:
+                    try:
+                        ct.editar_livro(
+                            {
+                                "titulo": str(titulo),
+                                "autor": str(autor),
+                                "ano": int(ano),
+                                "preco": float(preco),
+                                "quantidade": int(quantidade),
+                            },
+                            busca,
                         )
-                        return
-                except Exception as e:
-                    _ = st.error(f"Falha na atualização: {e}!")
+                        st.session_state["success_message"] = (
+                            f"Produto {titulo} editado com sucesso!"
+                        )
+                        st.rerun()
+                    except ValueError as e:
+                        _ = st.error(f"Falha no cadastro! {e}")
 
     def renderizar_excluir(self) -> None:
         _ = st.markdown("Excluir Livro")
@@ -192,7 +217,7 @@ class FrontEnd:
 
         if st.session_state.codigo_excluir:
             cid = st.session_state.codigo_excluir
-            if cid in ct.listar_id():
+            if ct.buscar_livro_codigo(cid):
                 livros = ct.listar_livro()
                 titulo = next(
                     (livro["titulo"] for livro in livros if livro["id"] == cid),

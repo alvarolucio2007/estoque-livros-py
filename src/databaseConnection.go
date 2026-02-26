@@ -62,7 +62,8 @@ func deletarLivro(id uint) error {
 }
 
 func atualizarLivro(id uint, dados Livro) error {
-	return checarResultado(DB.Model(&Livro{}).Where("id=?", id).Updates(dados))
+	dados.ID = id
+	return checarResultado(DB.Model(&Livro{}).Where("id=?", id).Omit("id").Select("*").Updates(dados))
 }
 
 func buscarLivroTitulo(titulo string) ([]Livro, error) {

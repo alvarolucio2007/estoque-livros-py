@@ -9,14 +9,15 @@ def _tratar_resposta(response):
     """Função auxiliar para validar o status code e tratar erros."""
     if response.status_code in [200, 201]:  # 200: OK, 201: Created
         return response.json()
-
     # Se chegou aqui, deu erro
     try:
-        detalhe = response.json().get("detail", "Erro desconhecido")
-    except ValueError:
-        detalhe = response.text
-
-    raise Exception(f"Falha na API ({response.status_code}): {detalhe}")
+        err_json = response.json()
+        mensagem = (
+            response.get("detail") or err_json.get("mensagem") or "Erro desconhecido"
+        )
+    except Exception:
+        mensagem = f"Erro no servidor: {response.status_code}"
+    raise ValueError(mensagem)
 
 
 # --- GET (Ler) ---
@@ -88,56 +89,18 @@ def cadastrar_livro(livro_dados: dict):
         response = requests.post(f"{API_URL}/livros", json=livro_dados, timeout=10)
         return _tratar_resposta(response)
     except requests.exceptions.ConnectionError:
-        raise Exception("Erro de conexão ao tentar cadastrar.")
+        raise Exception("Erro de conexão ao tentar cadastrar")
 
 
-# --- Patch (Editar) ---
+# --- Put (Editar) ---
 
 
-def editar_titulo(id: int, novo_titulo: str):
+def editar_livro(livro_dados: dict, id: int):
     try:
-        response = requests.patch(f"{API_URL}/livros/{id}/titulo?titulo={novo_titulo}")
+        response = requests.put(f"{API_URL}/livros/{id}", json=livro_dados, timeout=10)
         return _tratar_resposta(response)
     except requests.exceptions.ConnectionError:
-        raise Exception("Erro de conexão ao tentar editar o título.")
-
-
-def editar_autor(livro_id: int, autor: str):
-    try:
-        response = requests.patch(f"{API_URL}/livros/{livro_id}/autor?autor={autor}")
-        return _tratar_resposta(response)
-    except requests.exceptions.ConnectionError:
-        raise Exception("Erro de conexão ao tentar editar o título.")
-
-
-def editar_quantidade(livro_id: int, quantidade: int):
-    try:
-        response = requests.patch(
-            f"{API_URL}/livros/{livro_id}/quantidade?quantidade={quantidade}"
-        )
-        return _tratar_resposta(response)
-    except requests.exceptions.ConnectionError:
-        raise Exception("Erro de conexão ao tentar editar o título.")
-
-
-def editar_ano(livro_id: int, ano: int):
-    try:
-        response = requests.patch(
-            f"{API_URL}/livros/{livro_id}/ano?ano={ano}", timeout=10
-        )
-        return _tratar_resposta(response)
-    except requests.exceptions.ConnectionError:
-        raise Exception("Erro de conexão ao tentar editar o ano.")
-
-
-def editar_preco(livro_id: int, preco: float):
-    try:
-        response = requests.patch(
-            f"{API_URL}/livros/{livro_id}/preco?preco={preco}", timeout=10
-        )
-        return _tratar_resposta(response)
-    except requests.exceptions.ConnectionError:
-        raise Exception("Erro de conexão ao tentar editar o preço.")
+        raise Exception("Erro de conexão ao tentar editar")
 
 
 # --- Delete (Remover) ---

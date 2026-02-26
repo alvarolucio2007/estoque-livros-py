@@ -81,24 +81,24 @@ func setupAPI() {
 		}
 		c.JSON(201, "criado com sucesso")
 	})
-	r.PUT("/livros/:id/", func(c *gin.Context) {
+	r.PUT("/livros/:id", func(c *gin.Context) {
 		idStr := c.Param("id")
 		idUint, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
-			c.JSON(400, gin.H{"error": "o id deve ser um número válido"})
+			c.JSON(400, gin.H{"mensagem": "Não foi possível atualizar", "codigo": 400})
 			return
 		}
 		var dadosAtualizados Livro
 		if err := c.ShouldBindJSON(&dadosAtualizados); err != nil {
-			c.JSON(400, gin.H{"error": "dados inválidos"})
+			c.JSON(404, RespostaErro{Mensagem: "livro não encontrado"})
 			return
 		}
 		err = servicoAtualizarLivro(uint(idUint), dadosAtualizados)
 		if err != nil {
-			c.JSON(500, gin.H{"error": "erro ao procurar livro por id para edição"})
+			c.JSON(500, RespostaErro{Mensagem: "falha ao atualizar livro", Detalhe: err.Error()})
 			return
 		}
-		c.JSON(200, "livro editado com sucesso")
+		c.JSON(200, dadosAtualizados)
 	})
 	r.DELETE("/livros/:id", func(c *gin.Context) {
 		idStr := c.Param("id")
@@ -114,5 +114,9 @@ func setupAPI() {
 		}
 		c.JSON(200, "livro deletado com sucesso")
 	})
-	r.Run("localhost:8000")
+
+	err := r.Run("localhost:8000")
+	if err != nil {
+		return
+	}
 }
